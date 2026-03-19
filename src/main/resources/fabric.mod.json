@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "ywna",
+  "version": "${version}",
+  "name": "You Were Never Alone",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/ywna/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "io.github.FMG9167.ywna.client.YWNAModDataGenerator"
+    ],
+    "client": [
+      "io.github.FMG9167.ywna.client.YWNAModClient"
+    ],
+    "main": [
+      "io.github.FMG9167.ywna.YWNAMod"
+    ]
+  },
+  "mixins": [
+    "ywna.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
