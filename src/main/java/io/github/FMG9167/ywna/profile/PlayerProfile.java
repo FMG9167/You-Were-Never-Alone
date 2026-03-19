@@ -32,7 +32,7 @@ public class PlayerProfile {
 
     public String[] hotbarSnapshot = new String[9];
 
-    public long[] lastEffectTick = new long[8];
+    public long[] lastEffectTick = new long[32];
     public int noticedEffectsMask = 0;
 
     public boolean doppelgangerActive = false;
@@ -47,7 +47,7 @@ public class PlayerProfile {
         nbt.putUuid("playerUUID", playerUUID);
 
         nbt.putFloat("fearScore", fearScore);
-        nbt.putFloat("totalObservedTicks", totalObservedTicks);
+        nbt.putLong("totalObservedTicks", totalObservedTicks);
 
         nbt.putFloat("avgMoveSpeed", avgMoveSpeed);
         nbt.putFloat("sprintFrac", sprintFrac);
@@ -55,7 +55,7 @@ public class PlayerProfile {
         nbt.putFloat("cameraVariance", cameraVariance);
         nbt.putInt("lookBehindCount", lookBehindCount);
 
-        if (safeZone != null) {
+        if(safeZone != null) {
             nbt.putInt("safeZoneX", safeZone.getX());
             nbt.putInt("safeZoneY", safeZone.getY());
             nbt.putInt("safeZoneZ", safeZone.getZ());
@@ -73,7 +73,7 @@ public class PlayerProfile {
 
         NbtCompound hotbar = new NbtCompound();
         for (int i = 0; i < 9; i++) {
-            if (hotbarSnapshot[i] != null) {
+            if(hotbarSnapshot[i] != null) {
                 hotbar.putString("slot" + i, hotbarSnapshot[i]);
             }
         }
@@ -83,7 +83,7 @@ public class PlayerProfile {
         nbt.putInt("noticedEffectsMask", noticedEffectsMask);
 
         nbt.putBoolean("doppelgangerActive", doppelgangerActive);
-        if (doppelgangerPos != null) {
+        if(doppelgangerPos != null) {
             nbt.putDouble("doppelgangerX", doppelgangerPos.x);
             nbt.putDouble("doppelgangerY", doppelgangerPos.y);
             nbt.putDouble("doppelgangerZ", doppelgangerPos.z);
@@ -109,7 +109,7 @@ public class PlayerProfile {
         p.cameraVariance = nbt.getFloat("cameraVariance");
         p.lookBehindCount = nbt.getInt("lookBehindCount");
 
-        if (nbt.contains("safeZoneX")) {
+        if(nbt.contains("safeZoneX")) {
             p.safeZone = new BlockPos(
                     nbt.getInt("safeZoneX"),
                     nbt.getInt("safeZoneY"),
@@ -126,10 +126,10 @@ public class PlayerProfile {
             float yaw =  (float) lookList.getDouble(i);
             float pitch = (float) lookList.getDouble(i + 1);
 
-            if (p.lookHistory.size() >= LOOK_HISTORY_SIZE) {
+            if(p.lookHistory.size() >= LOOK_HISTORY_SIZE) {
                 p.lookHistory.pollFirst();
-                p.lookHistory.addLast(new float[] {yaw, pitch});
             }
+            p.lookHistory.addLast(new float[] {yaw, pitch});
         }
 
         NbtCompound hotbar = nbt.getCompound("hotbarSnapshot");
@@ -144,7 +144,7 @@ public class PlayerProfile {
         p.doppelgangerActive = nbt.getBoolean("doppelgangerActive");
         if(nbt.contains("doppelgangerX")) {
             p.doppelgangerPos = new Vec3d(
-                    nbt.getDouble("dopplegangerX"),
+                    nbt.getDouble("doppelgangerX"),
                     nbt.getDouble("doppelgangerY"),
                     nbt.getDouble("doppelgangerZ")
             );
@@ -157,14 +157,14 @@ public class PlayerProfile {
     }
 
     public int getPhase() {
-        if (totalObservedTicks < 2400) return 0;
+        if(totalObservedTicks < 2400) return 0;
 
-        if (replacementComplete) return 6;
-        if (fearScore >= 0.90f) return 5;
-        if (fearScore >= 0.70f) return 4;
-        if (fearScore >= 0.50f) return 3;
-        if (fearScore >= 0.20f) return 2;
-        if (fearScore >= 0.10f) return 1;
+        if(replacementComplete) return 6;
+        if(fearScore >= 0.90f) return 5;
+        if(fearScore >= 0.70f) return 4;
+        if(fearScore >= 0.50f) return 3;
+        if(fearScore >= 0.20f) return 2;
+        if(fearScore >= 0.10f) return 1;
         return 0;
     }
 
@@ -173,13 +173,13 @@ public class PlayerProfile {
    }
 
    public boolean effectOffCooldown(int effectOrdinal, long cooldownTicks, long currentTick) {
-        if (effectOrdinal < 0 || effectOrdinal >= lastEffectTick.length) {return false;}
+        if(effectOrdinal < 0 || effectOrdinal >= lastEffectTick.length) {return false;}
 
         return (currentTick - lastEffectTick[effectOrdinal]) >= cooldownTicks;
    }
 
    public void markEffectFired(int effectOrdinal, long currentTick) {
-        if (effectOrdinal >= 0 && effectOrdinal < lastEffectTick.length) {
+        if(effectOrdinal >= 0 && effectOrdinal < lastEffectTick.length) {
             lastEffectTick[effectOrdinal] = currentTick;
         }
    }
