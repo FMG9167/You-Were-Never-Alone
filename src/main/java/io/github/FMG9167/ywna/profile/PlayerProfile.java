@@ -1,10 +1,8 @@
 package io.github.FMG9167.ywna.profile;
 
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtDouble;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
@@ -24,38 +22,35 @@ public class PlayerProfile {
     public float cameraVariance = 0.0f;
     public int lookBehindCount = 0;
 
+    public int sessionStartHour = 0;
+    public int sessionEndHour = 0;
+    public long avgSessionLengthTicks = 0;
+    public long sessionStartTick = 0;
+    public long totalSessions = 0;
+
+    public BlockPos lastDeathPos = null;
+
     public BlockPos safeZone = null;
     public double safeZoneSumX = 0;
     public double safeZoneSumZ = 0;
     public long safeZoneSamples = 0;
+    public BlockPos safeZoneDoor = null;
 
     public static final int LOOK_HISTORY_SIZE = 60;
     public final Deque<float[]> lookHistory = new ArrayDeque<>(LOOK_HISTORY_SIZE);
 
     public String[] hotbarSnapshot = new String[9];
+    public int[] hotbarUsageCount = new int[9];
 
     public long[] lastEffectTick = new long[32];
     public int noticedEffectsMask = 0;
+    public int processedNoticedMask = 0;
 
     public boolean doppelgangerActive = false;
     public Vec3d doppelgangerPos = null;
     public int doppelgangerSightings = 0;
 
     public boolean replacementComplete = false;
-
-    // Event Variables
-
-    public ItemStack missingItem = ItemStack.EMPTY;
-    public int missingItemSlot = -1;
-    public long missingItemRestoreTick = -1L;
-    public boolean missingItemSeen = false;
-
-    public DefaultedList<ItemStack> wipedInventory = null;
-    public long wipeRestoreTick = -1L;
-    public long lastWipeTick = 0L;
-
-    public int processedNoticedMask = 0;
-    public int pendingEffectsMask = 0;
 
     public NbtCompound toNbt() {
         NbtCompound nbt = new NbtCompound();
@@ -71,6 +66,18 @@ public class PlayerProfile {
         nbt.putFloat("cameraVariance", cameraVariance);
         nbt.putInt("lookBehindCount", lookBehindCount);
 
+        nbt.putInt("sessionStartHour", sessionStartHour);
+        nbt.putInt("sessionEndHour", sessionEndHour);
+        nbt.putLong("avgSessionLengthTicks", avgSessionLengthTicks);
+        nbt.putLong("sessionStartTick", sessionStartTick);
+        nbt.putLong("totalSessions", totalSessions);
+
+        if(lastDeathPos != null) {
+            nbt.putInt("lastDeathPosX", lastDeathPos.getX());
+            nbt.putInt("lastDeathPosY", lastDeathPos.getY());
+            nbt.putInt("lastDeathPosZ", lastDeathPos.getZ());
+        }
+
         if(safeZone != null) {
             nbt.putInt("safeZoneX", safeZone.getX());
             nbt.putInt("safeZoneY", safeZone.getY());
@@ -79,6 +86,11 @@ public class PlayerProfile {
         nbt.putDouble("safeZoneSumX", safeZoneSumX);
         nbt.putDouble("safeZoneSumZ", safeZoneSumZ);
         nbt.putLong("safeZoneSamples", safeZoneSamples);
+        if(safeZoneDoor != null) {
+            nbt.putInt("safeZoneDoorX", safeZoneDoor.getX());
+            nbt.putInt("safeZoneDoorY", safeZoneDoor.getY());
+            nbt.putInt("safeZoneDoorZ", safeZoneDoor.getZ());
+        }
 
         NbtList lookList = new NbtList();
         for (float[] look : lookHistory) {
@@ -94,9 +106,11 @@ public class PlayerProfile {
             }
         }
         nbt.put("hotbarSnapshot", hotbar);
+        nbt.putIntArray("hotbarUsageCount", hotbarUsageCount);
 
         nbt.putLongArray("lastEffectTick", lastEffectTick);
         nbt.putInt("noticedEffectsMask", noticedEffectsMask);
+        nbt.putInt("processedNoticedMask", processedNoticedMask);
 
         nbt.putBoolean("doppelgangerActive", doppelgangerActive);
         if(doppelgangerPos != null) {
@@ -107,27 +121,6 @@ public class PlayerProfile {
         nbt.putInt("doppelgangerSightings", doppelgangerSightings);
 
         nbt.putBoolean("replacementComplete", replacementComplete);
-
-
-        nbt.putInt("missingItemSlot", missingItemSlot);
-        nbt.putLong("missingItemRestoreTick", missingItemRestoreTick);
-        if(!missingItem.isEmpty()) {
-            nbt.put("missingItem", missingItem.writeNbt(new NbtCompound()));
-        }
-        nbt.putBoolean("missingItemSeen", missingItemSeen);
-
-        nbt.putLong("wipeRestoreTick", wipeRestoreTick);
-        if(wipedInventory != null) {
-            NbtList wipedList = new NbtList();
-            for (ItemStack stack : wipedInventory) {
-                wipedList.add(stack.writeNbt(new NbtCompound()));
-            }
-            nbt.put("wipedInventory", wipedList);
-        }
-        nbt.putLong("lastWipeTick", lastWipeTick);
-
-        nbt.putInt("processedNoticedMask", processedNoticedMask);
-        nbt.putInt("pendingEffectsMask", pendingEffectsMask);
 
         return nbt;
     }
@@ -146,6 +139,20 @@ public class PlayerProfile {
         p.cameraVariance = nbt.getFloat("cameraVariance");
         p.lookBehindCount = nbt.getInt("lookBehindCount");
 
+        p.sessionStartHour = nbt.getInt("sessionStartHour");
+        p.sessionEndHour = nbt.getInt("sessionEndHour");
+        p.avgSessionLengthTicks = nbt.getLong("avgSessionLengthTicks");
+        p.sessionStartTick = nbt.getLong("sessionStartTick");
+        p.totalSessions = nbt.getLong("totalSessions");
+
+        if(nbt.contains("lastDeathPosX")) {
+            p.lastDeathPos = new BlockPos(
+                    nbt.getInt("lastDeathPosX"),
+                    nbt.getInt("lastDeathPosY"),
+                    nbt.getInt("lastDeathPosZ")
+            );
+        }
+
         if(nbt.contains("safeZoneX")) {
             p.safeZone = new BlockPos(
                     nbt.getInt("safeZoneX"),
@@ -156,6 +163,13 @@ public class PlayerProfile {
         p.safeZoneSumX = nbt.getDouble("safeZoneSumX");
         p.safeZoneSumZ = nbt.getDouble("safeZoneSumZ");
         p.safeZoneSamples = nbt.getLong("safeZoneSamples");
+        if(nbt.contains("safeZoneDoorX")) {
+            p.safeZoneDoor = new BlockPos(
+                    nbt.getInt("safeZoneDoorX"),
+                    nbt.getInt("safeZoneDoorY"),
+                    nbt.getInt("safeZoneDoorZ")
+            );
+        }
 
         NbtList lookList = nbt.getList("lookHistory", 6);
         p.lookHistory.clear();
@@ -174,9 +188,11 @@ public class PlayerProfile {
             String key = "slot" + i;
             p.hotbarSnapshot[i] = hotbar.contains(key) ? hotbar.getString(key) : null;
         }
+        p.hotbarUsageCount = nbt.getIntArray("hotbarUsageCount");
 
         p.lastEffectTick = nbt.getLongArray("lastEffectTick");
         p.noticedEffectsMask = nbt.getInt("noticedEffectsMask");
+        p.processedNoticedMask = nbt.getInt("processedNoticedMask");
 
         p.doppelgangerActive = nbt.getBoolean("doppelgangerActive");
         if(nbt.contains("doppelgangerX")) {
@@ -189,27 +205,6 @@ public class PlayerProfile {
         p.doppelgangerSightings = nbt.getInt("doppelgangerSightings");
 
         p.replacementComplete = nbt.getBoolean("replacementComplete");
-
-
-        p.missingItemSlot = nbt.getInt("missingItemSlot");
-        p.missingItemRestoreTick = nbt.getLong("missingItemRestoreTick");
-        if(nbt.contains("missingItem")) {
-            p.missingItem = ItemStack.fromNbt(nbt.getCompound("missingItem"));
-        }
-        p.missingItemSeen =  nbt.getBoolean("missingItemSeen");
-
-        p.wipeRestoreTick = nbt.getLong("wipeRestoreTick");
-        if(nbt.contains("wipeRestoreTick")) {
-            NbtList wipedList = nbt.getList("wipedInventory", 10);
-            p.wipedInventory = DefaultedList.ofSize(wipedList.size(), ItemStack.EMPTY);
-            for (int i = 0; i < wipedList.size(); i++) {
-                p.wipedInventory.set(i, ItemStack.fromNbt(wipedList.getCompound(i)));
-            }
-        }
-        p.lastWipeTick = nbt.getLong("lastWipeTick");
-
-        p.processedNoticedMask = nbt.getInt("processedNoticedMask");
-        p.pendingEffectsMask = nbt.getInt("pendingEffectsMask");
 
         return p;
     }

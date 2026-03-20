@@ -63,4 +63,5 @@ public class ProfileManager {
     public boolean isDisconnecting(ServerPlayerEntity player) {
         return disconnecting.contains(player.getUuid());
     }
+
 }

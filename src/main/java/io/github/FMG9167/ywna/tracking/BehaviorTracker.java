@@ -1,15 +1,18 @@
 package io.github.FMG9167.ywna.tracking;
 
+import io.github.FMG9167.ywna.YWNAMod;
 import io.github.FMG9167.ywna.profile.PlayerProfile;
 import io.github.FMG9167.ywna.profile.ProfileManager;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.DoorBlock;
+import net.minecraft.block.enums.DoubleBlockHalf;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class BehaviorTracker {
 
@@ -18,6 +21,7 @@ public class BehaviorTracker {
     private static final int DWELL_THRESHOLD_TICKS = 200;
     private static final float LOOK_BEHIND_THRESHOLD = 150.0f;
     private static final float CAMERA_VARIANCE_MAX_DELTA = 60f;
+    private static final int SEARCH_RADIUS = 16;
 
     private float accSpeed = 0;
     private int accSprint = 0;
@@ -82,6 +86,8 @@ public class BehaviorTracker {
         }
         profile.lookHistory.addLast(new float[] {yaw, pitch});
 
+        profile.hotbarUsageCount[player.getInventory().selectedSlot]++;
+
         BlockPos currentBlock = player.getBlockPos();
         if(dwellAnchor == null) {
             dwellAnchor = currentBlock;
@@ -89,7 +95,7 @@ public class BehaviorTracker {
         } else if(currentBlock.isWithinDistance(dwellAnchor, 8.0)) {
             dwellTicks++;
             if (dwellTicks >= DWELL_THRESHOLD_TICKS) {
-                updateSafeZone(profile, pos);
+                updateSafeZone(player.getServerWorld(), profile, pos);
             }
         } else {
             dwellAnchor = currentBlock;
@@ -111,7 +117,7 @@ public class BehaviorTracker {
         accSpeed = 0; accSprint = 0;  accSneak = 0; accYawDelta = 0; accumTicks = 0;
     }
 
-    private void updateSafeZone(PlayerProfile profile, Vec3d pos) {
+    private void updateSafeZone(ServerWorld world, PlayerProfile profile, Vec3d pos) {
         profile.safeZoneSumX += pos.x;
         profile.safeZoneSumZ += pos.z;
         profile.safeZoneSamples++;
@@ -120,6 +126,26 @@ public class BehaviorTracker {
                 dwellAnchor.getY(),
                 (int)(profile.safeZoneSumZ / profile.safeZoneSamples)
         );
+
+        List<BlockPos> doors = new ArrayList<>();
+
+        BlockPos.iterate(
+                profile.safeZone.add(-SEARCH_RADIUS, -SEARCH_RADIUS/2, -SEARCH_RADIUS),
+                profile.safeZone.add(SEARCH_RADIUS, SEARCH_RADIUS/2, SEARCH_RADIUS)
+        ).forEach(p -> {
+            BlockState state = world.getBlockState(p);
+            if(state.getBlock() instanceof DoorBlock && state.get(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
+                doors.add(p.toImmutable());
+            }
+        });
+
+        if(doors.isEmpty()) {
+            YWNAMod.LOGGER.info("[YWNA] BehaviorTracker: No doors found near safe zone");
+            return;
+        }
+
+        doors.sort(Comparator.comparingDouble(p -> p.getSquaredDistance(profile.safeZone)));
+        profile.safeZoneDoor = doors.get(0);
     }
 
     private void snapshotHotbar(ServerPlayerEntity player, PlayerProfile profile) {
