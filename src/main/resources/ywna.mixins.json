@@ -4,6 +4,7 @@
   "package": "io.github.FMG9167.ywna.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "InventoryOpenMixin",
     "ProfileNbtMixin"
   ],
   "client": [

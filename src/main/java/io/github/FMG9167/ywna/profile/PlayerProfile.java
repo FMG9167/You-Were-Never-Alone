@@ -1,8 +1,10 @@
 package io.github.FMG9167.ywna.profile;
 
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtDouble;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
@@ -40,6 +42,20 @@ public class PlayerProfile {
     public int doppelgangerSightings = 0;
 
     public boolean replacementComplete = false;
+
+    // Event Variables
+
+    public ItemStack missingItem = ItemStack.EMPTY;
+    public int missingItemSlot = -1;
+    public long missingItemRestoreTick = -1L;
+    public boolean missingItemSeen = false;
+
+    public DefaultedList<ItemStack> wipedInventory = null;
+    public long wipeRestoreTick = -1L;
+    public long lastWipeTick = 0L;
+
+    public int processedNoticedMask = 0;
+    public int pendingEffectsMask = 0;
 
     public NbtCompound toNbt() {
         NbtCompound nbt = new NbtCompound();
@@ -91,6 +107,27 @@ public class PlayerProfile {
         nbt.putInt("doppelgangerSightings", doppelgangerSightings);
 
         nbt.putBoolean("replacementComplete", replacementComplete);
+
+
+        nbt.putInt("missingItemSlot", missingItemSlot);
+        nbt.putLong("missingItemRestoreTick", missingItemRestoreTick);
+        if(!missingItem.isEmpty()) {
+            nbt.put("missingItem", missingItem.writeNbt(new NbtCompound()));
+        }
+        nbt.putBoolean("missingItemSeen", missingItemSeen);
+
+        nbt.putLong("wipeRestoreTick", wipeRestoreTick);
+        if(wipedInventory != null) {
+            NbtList wipedList = new NbtList();
+            for (ItemStack stack : wipedInventory) {
+                wipedList.add(stack.writeNbt(new NbtCompound()));
+            }
+            nbt.put("wipedInventory", wipedList);
+        }
+        nbt.putLong("lastWipeTick", lastWipeTick);
+
+        nbt.putInt("processedNoticedMask", processedNoticedMask);
+        nbt.putInt("pendingEffectsMask", pendingEffectsMask);
 
         return nbt;
     }
@@ -152,6 +189,27 @@ public class PlayerProfile {
         p.doppelgangerSightings = nbt.getInt("doppelgangerSightings");
 
         p.replacementComplete = nbt.getBoolean("replacementComplete");
+
+
+        p.missingItemSlot = nbt.getInt("missingItemSlot");
+        p.missingItemRestoreTick = nbt.getLong("missingItemRestoreTick");
+        if(nbt.contains("missingItem")) {
+            p.missingItem = ItemStack.fromNbt(nbt.getCompound("missingItem"));
+        }
+        p.missingItemSeen =  nbt.getBoolean("missingItemSeen");
+
+        p.wipeRestoreTick = nbt.getLong("wipeRestoreTick");
+        if(nbt.contains("wipeRestoreTick")) {
+            NbtList wipedList = nbt.getList("wipedInventory", 10);
+            p.wipedInventory = DefaultedList.ofSize(wipedList.size(), ItemStack.EMPTY);
+            for (int i = 0; i < wipedList.size(); i++) {
+                p.wipedInventory.set(i, ItemStack.fromNbt(wipedList.getCompound(i)));
+            }
+        }
+        p.lastWipeTick = nbt.getLong("lastWipeTick");
+
+        p.processedNoticedMask = nbt.getInt("processedNoticedMask");
+        p.pendingEffectsMask = nbt.getInt("pendingEffectsMask");
 
         return p;
     }
