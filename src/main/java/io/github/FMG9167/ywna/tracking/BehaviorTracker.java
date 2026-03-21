@@ -86,7 +86,9 @@ public class BehaviorTracker {
         }
         profile.lookHistory.addLast(new float[] {yaw, pitch});
 
-        profile.hotbarUsageCount[player.getInventory().selectedSlot]++;
+        if(profile.hotbarUsageCount.length > 0) {
+            profile.hotbarUsageCount[player.getInventory().selectedSlot]++;
+        }
 
         BlockPos currentBlock = player.getBlockPos();
         if(dwellAnchor == null) {

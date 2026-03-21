@@ -1,13 +1,16 @@
 package io.github.FMG9167.ywna;
 
+import io.github.FMG9167.ywna.debug.DebugCommand;
+import io.github.FMG9167.ywna.networking.YWNAPackets;
 import io.github.FMG9167.ywna.phase.PhaseManager;
+import io.github.FMG9167.ywna.profile.PlayerProfile;
 import io.github.FMG9167.ywna.profile.ProfileManager;
 import io.github.FMG9167.ywna.tracking.BehaviorTracker;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.entity.player.PlayerEntity;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.network.ServerPlayerEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +25,16 @@ public class YWNAMod implements ModInitializer {
     @Override
     public void onInitialize() {
         LOGGER.info("[YWNA] Initializing...");
+
+        DebugCommand.register();
+
+        ServerPlayNetworking.registerGlobalReceiver(YWNAPackets.INVENTORY_OPEN,
+                (server, player, handler, buf, responseSender) -> {
+            server.execute(() -> {
+                PlayerProfile profile = ProfileManager.get(player);
+                LOGGER.info("[YWNA] Inventory Opened by {} ", player.getName().toString());
+            });
+        });
 
         ServerTickEvents.END_SERVER_TICK.register((server) -> {
             PhaseManager.tick(server);
